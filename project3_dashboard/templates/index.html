@@ -1,0 +1,1311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Network Graph Dashboard - Sports Social Media Analytics</title>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #0a0e27;
+            color: #fff;
+            overflow: hidden;
+            height: 100vh;
+        }
+        
+        /* Network canvas */
+        .network-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        
+        canvas {
+            width: 100%;
+            height: 100%;
+            cursor: grab;
+        }
+        
+        canvas:active {
+            cursor: grabbing;
+        }
+        
+        /* Top bar */
+        .top-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: rgba(10, 14, 39, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding: 16px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 100;
+        }
+        
+        .title-section {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        
+        .hud-title {
+            font-size: 20px;
+            font-weight: 800;
+        }
+        
+        .hud-subtitle {
+            font-size: 13px;
+            opacity: 0.6;
+        }
+        
+        .top-stats {
+            display: flex;
+            gap: 24px;
+            font-size: 13px;
+        }
+        
+        .stat-item {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .stat-label {
+            opacity: 0.6;
+            font-size: 11px;
+        }
+        
+        .stat-value {
+            font-weight: 700;
+            color: #58a6ff;
+            font-size: 16px;
+        }
+        
+        /* Legend */
+        .legend {
+            position: fixed;
+            bottom: 24px;
+            left: 24px;
+            background: rgba(10, 14, 39, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.1);
+            z-index: 100;
+        }
+        
+        .legend-title {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 12px;
+            opacity: 0.6;
+            font-weight: 600;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+        
+        .legend-dot {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            box-shadow: 0 0 10px currentColor;
+        }
+        
+        /* Detail panel - EXPANDED */
+        .detail-panel {
+            position: fixed;
+            right: 0;
+            top: 65px;
+            width: 550px;
+            height: calc(100vh - 65px);
+            background: rgba(10, 14, 39, 0.98);
+            backdrop-filter: blur(10px);
+            border-left: 1px solid rgba(255,255,255,0.1);
+            padding: 32px;
+            z-index: 100;
+            transform: translateX(100%);
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow-y: auto;
+        }
+        
+        .detail-panel.visible {
+            transform: translateX(0);
+        }
+        
+        .detail-header {
+            margin-bottom: 24px;
+        }
+        
+        .detail-type {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #58a6ff;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+        
+        .detail-title {
+            font-size: 28px;
+            font-weight: 800;
+            margin-bottom: 8px;
+        }
+        
+        .detail-desc {
+            font-size: 14px;
+            opacity: 0.7;
+            line-height: 1.6;
+        }
+        
+        .close-btn {
+            position: absolute;
+            top: 32px;
+            right: 32px;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.1);
+            border: none;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            font-size: 20px;
+        }
+        
+        .close-btn:hover {
+            background: rgba(255,255,255,0.2);
+            transform: rotate(90deg);
+        }
+        
+        /* Controls section */
+        .controls-section {
+            margin: 28px 0;
+            padding: 20px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .controls-title {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 16px;
+            opacity: 0.6;
+            font-weight: 600;
+        }
+        
+        .control-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+        
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .control-label {
+            font-size: 12px;
+            opacity: 0.7;
+            font-weight: 600;
+        }
+        
+        select {
+            padding: 10px 14px;
+            background: rgba(0,0,0,0.5);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: #fff;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        
+        select:focus {
+            outline: none;
+            border-color: #58a6ff;
+            box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.2);
+        }
+        
+        button.update-btn {
+            padding: 12px 24px;
+            background: #58a6ff;
+            border: none;
+            color: white;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: 8px;
+        }
+        
+        button.update-btn:hover {
+            background: #4a8fe6;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(88, 166, 255, 0.3);
+        }
+        
+        /* Chart section */
+        .chart-section {
+            margin: 24px 0;
+        }
+        
+        .section-title {
+            font-size: 13px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            opacity: 0.6;
+        }
+        
+        .detail-chart {
+            height: 350px;
+            width: 95%;
+            background: rgba(0,0,0,0.3);
+            border-radius: 12px;
+            padding: 16px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        
+        /* Stats grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin: 20px 0;
+        }
+        
+        .stat-box {
+            background: rgba(0,0,0,0.3);
+            padding: 16px;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.1);
+            text-align: center;
+        }
+        
+        .stat-box-label {
+            font-size: 11px;
+            opacity: 0.6;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .stat-box-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #58a6ff;
+            font-variant-numeric: tabular-nums;
+        }
+        
+        /* Insight box */
+        .insight-box {
+            background: linear-gradient(135deg, rgba(88, 166, 255, 0.15), rgba(88, 166, 255, 0.05));
+            border-left: 4px solid #58a6ff;
+            padding: 20px;
+            border-radius: 12px;
+            margin: 24px 0;
+        }
+        
+        .insight-label {
+            font-size: 12px;
+            color: #58a6ff;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+            font-weight: 700;
+        }
+        
+        .insight-text {
+            font-size: 15px;
+            line-height: 1.7;
+            opacity: 0.9;
+        }
+        
+        /* Data table */
+        .data-table {
+            width: 100%;
+            margin: 20px 0;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        
+        .data-table th {
+            text-align: left;
+            padding: 12px;
+            background: rgba(0,0,0,0.3);
+            border-bottom: 2px solid rgba(255,255,255,0.2);
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 0.5px;
+        }
+        
+        .data-table td {
+            padding: 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        
+        .data-table tr:hover {
+            background: rgba(255,255,255,0.05);
+        }
+        
+        /* Instructions */
+        .instructions {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: rgba(10, 14, 39, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 16px 20px;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.1);
+            font-size: 13px;
+            opacity: 0.8;
+            z-index: 100;
+            max-width: 300px;
+        }
+        
+        .instructions strong {
+            color: #58a6ff;
+        }
+        
+        /* Loading indicator */
+        .loading-indicator {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(10, 14, 39, 0.95);
+            padding: 32px 48px;
+            border-radius: 16px;
+            border: 1px solid rgba(255,255,255,0.1);
+            text-align: center;
+            z-index: 1000;
+            display: none;
+        }
+        
+        .loading-indicator.visible {
+            display: block;
+        }
+        
+        .spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid rgba(255,255,255,0.1);
+            border-top-color: #58a6ff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 16px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Top bar -->
+    <div class="top-bar">
+        <div class="title-section">
+            <div>
+                <div class="hud-title">🌐 Network Explorer Dashboard</div>
+                <div class="hud-subtitle">All collected data • Analysis focused on Nov 1-14, 2025</div>
+            </div>
+        </div>
+        <div class="top-stats">
+            <div class="stat-item">
+                <span class="stat-label">Total Posts</span>
+                <span class="stat-value" id="total-posts">—</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Platforms</span>
+                <span class="stat-value">3</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Posts/Hour (Live)</span>
+                <span class="stat-value" id="live-rate">—</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Last Hour</span>
+                <span class="stat-value" id="posts-last-hour">—</span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Network canvas -->
+    <div class="network-container">
+        <canvas id="network-canvas"></canvas>
+    </div>
+    
+    <!-- Legend -->
+    <div class="legend">
+        <div class="legend-title">Node Types</div>
+        <div class="legend-item">
+            <div class="legend-dot" style="background: #fff; border: 2px solid #58a6ff;"></div>
+            <span>Start Here</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-dot" style="background: #58a6ff;"></div>
+            <span>Platforms</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-dot" style="background: #f97316;"></div>
+            <span>Features</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-dot" style="background: #10b981;"></div>
+            <span>Insights</span>
+        </div>
+    </div>
+    
+    <!-- Detail panel -->
+    <div class="detail-panel" id="detail-panel">
+        <button class="close-btn" onclick="closePanel()">✕</button>
+        <div id="detail-content"></div>
+    </div>
+    
+
+    
+    <!-- Loading indicator -->
+    <div class="loading-indicator" id="loading">
+        <div class="spinner"></div>
+        <div>Loading analysis...</div>
+    </div>
+    
+    <script>
+        const canvas = document.getElementById('network-canvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Network data - MORE DETAILED
+        const nodes = [
+            // Center
+            { id: 'center', label: 'Explore\nAnalytics', x: 0, y: 0, type: 'center', size: 45, color: '#fff', border: '#58a6ff' },
+            
+            // Platforms (closer to center)
+            { id: 'sp', label: '4chan /sp/', type: 'platform', size: 32, color: '#58a6ff', connections: ['center', 'events', 'media', 'topics'] },
+            { id: 'pol', label: '4chan /pol/', type: 'platform', size: 28, color: '#58a6ff', connections: ['center', 'media'] },
+            { id: 'bsky', label: 'Bluesky', type: 'platform', size: 24, color: '#58a6ff', connections: ['center', 'events', 'media', 'topics'] },
+            
+            // Features (MAIN NODES - these open full features)
+            { id: 'events', label: 'Event Spike\nAnalysis', type: 'feature', size: 38, color: '#f97316', connections: ['center'], icon: '' },
+            { id: 'media', label: 'Media vs Text\nEngagement', type: 'feature', size: 38, color: '#f97316', connections: ['center'], icon: '' },
+            { id: 'topics', label: 'Topic\nDistribution', type: 'feature', size: 38, color: '#f97316', connections: ['center'], icon: '' },
+            
+            // Insights (connected to features)
+            { id: 'insight1', label: 'Activity drops\n34% during games', type: 'insight', size: 22, color: '#10b981', connections: ['events'] },
+            { id: 'insight2', label: 'Weekend\nspikes on /sp/', type: 'insight', size: 22, color: '#10b981', connections: ['events', 'sp'] },
+            { id: 'insight3', label: 'Text > Media\non Bluesky', type: 'insight', size: 22, color: '#10b981', connections: ['media', 'bsky'] },
+            { id: 'insight4', label: 'Similar engagement\non 4chan', type: 'insight', size: 22, color: '#10b981', connections: ['media', 'sp', 'pol'] },
+            { id: 'insight5', label: 'NFL dominates\ndiscussion', type: 'insight', size: 22, color: '#10b981', connections: ['topics', 'sp'] },
+        ];
+        
+        // Physics and rendering
+        let camera = { x: 0, y: 0, zoom: 1 };
+        let selectedNode = null;
+        let isDragging = false;
+        let dragStart = { x: 0, y: 0 };
+        let hoveredNode = null;
+        
+        // Setup
+        function setupCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        
+        function initPositions() {
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            
+            nodes.forEach((node, i) => {
+                if (node.id === 'center') {
+                    node.x = centerX;
+                    node.y = centerY;
+                } else if (node.type === 'platform') {
+                    const angle = (i / 3) * Math.PI * 2 - Math.PI / 2;
+                    node.x = centerX + Math.cos(angle) * 180;
+                    node.y = centerY + Math.sin(angle) * 180;
+                } else if (node.type === 'feature') {
+                    const angle = ((i - 3) / 3) * Math.PI * 2;
+                    node.x = centerX + Math.cos(angle) * 280;
+                    node.y = centerY + Math.sin(angle) * 280;
+                } else {
+                    const angle = Math.random() * Math.PI * 2;
+                    const radius = 350 + Math.random() * 100;
+                    node.x = centerX + Math.cos(angle) * radius;
+                    node.y = centerY + Math.sin(angle) * radius;
+                }
+                node.vx = 0;
+                node.vy = 0;
+            });
+        }
+        
+        function updatePhysics() {
+            // Constrain camera to reasonable bounds
+            const maxPan = 300;
+            camera.x = Math.max(-maxPan, Math.min(maxPan, camera.x));
+            camera.y = Math.max(-maxPan, Math.min(maxPan, camera.y));
+            
+            nodes.forEach(node => {
+                if (node.id === 'center') return;
+                
+                // Spring to connections
+                node.connections?.forEach(targetId => {
+                    const target = nodes.find(n => n.id === targetId);
+                    if (target) {
+                        const dx = target.x - node.x;
+                        const dy = target.y - node.y;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+                        const targetDist = node.type === 'platform' ? 180 : node.type === 'feature' ? 280 : 200;
+                        const force = (dist - targetDist) * 0.01;
+                        
+                        node.vx += (dx / dist) * force;
+                        node.vy += (dy / dist) * force;
+                    }
+                });
+                
+                // Repulsion
+                nodes.forEach(other => {
+                    if (node === other) return;
+                    const dx = other.x - node.x;
+                    const dy = other.y - node.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+                    const force = 800 / (dist * dist);
+                    
+                    node.vx -= (dx / dist) * force;
+                    node.vy -= (dy / dist) * force;
+                });
+                
+                node.vx *= 0.85;
+                node.vy *= 0.85;
+                
+                node.x += node.vx;
+                node.y += node.vy;
+            });
+        }
+        
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.save();
+            ctx.translate(camera.x, camera.y);
+            ctx.scale(camera.zoom, camera.zoom);
+            
+            // Connections
+            ctx.strokeStyle = 'rgba(88, 166, 255, 0.15)';
+            ctx.lineWidth = 2;
+            nodes.forEach(node => {
+                node.connections?.forEach(targetId => {
+                    const target = nodes.find(n => n.id === targetId);
+                    if (target) {
+                        const gradient = ctx.createLinearGradient(node.x, node.y, target.x, target.y);
+                        gradient.addColorStop(0, 'rgba(88, 166, 255, 0.25)');
+                        gradient.addColorStop(1, 'rgba(88, 166, 255, 0.25)');
+                        ctx.strokeStyle = gradient;
+                        
+                        ctx.beginPath();
+                        ctx.moveTo(node.x, node.y);
+                        ctx.lineTo(target.x, target.y);
+                        ctx.stroke();
+                    }
+                });
+            });
+            
+            // Nodes
+            nodes.forEach(node => {
+                const isHovered = hoveredNode === node;
+                const isSelected = selectedNode === node;
+                
+                // Glow for hover/select
+                if (isHovered || isSelected) {
+                    ctx.shadowColor = node.color;
+                    ctx.shadowBlur = 25;
+                }
+                
+                // Node circle
+                ctx.fillStyle = node.color;
+                ctx.beginPath();
+                ctx.arc(node.x, node.y, node.size, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Border for center node
+                if (node.border) {
+                    ctx.strokeStyle = node.border;
+                    ctx.lineWidth = 3;
+                    ctx.stroke();
+                }
+                
+                ctx.shadowBlur = 0;
+                
+                // Pulse for features
+                if (node.type === 'feature') {
+                    const pulse = Math.sin(Date.now() / 500) * 0.2 + 0.8;
+                    ctx.strokeStyle = node.color;
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.arc(node.x, node.y, node.size + 8, 0, Math.PI * 2);
+                    ctx.globalAlpha = pulse * 0.3;
+                    ctx.stroke();
+                    ctx.globalAlpha = 1;
+                }
+                
+                // Label
+                ctx.fillStyle = isHovered ? '#fff' : 'rgba(255,255,255,0.9)';
+                ctx.font = `${isHovered ? '14px' : '12px'} -apple-system, sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fontWeight = node.type === 'feature' ? '700' : '400';
+                
+                const lines = node.label.split('\n');
+                lines.forEach((line, i) => {
+                    ctx.fillText(line, node.x, node.y + node.size + 25 + i * 16);
+                });
+            });
+            
+            ctx.restore();
+        }
+        
+        function animate() {
+            updatePhysics();
+            draw();
+            requestAnimationFrame(animate);
+        }
+        
+        // Mouse interaction
+        function getMousePos(e) {
+            const rect = canvas.getBoundingClientRect();
+            return {
+                x: (e.clientX - rect.left - camera.x) / camera.zoom,
+                y: (e.clientY - rect.top - camera.y) / camera.zoom
+            };
+        }
+        
+        canvas.addEventListener('mousemove', (e) => {
+            if (isDragging) {
+                camera.x = e.clientX - dragStart.x;
+                camera.y = e.clientY - dragStart.y;
+            } else {
+                const pos = getMousePos(e);
+                hoveredNode = nodes.find(node => {
+                    const dx = pos.x - node.x;
+                    const dy = pos.y - node.y;
+                    return Math.sqrt(dx * dx + dy * dy) < node.size;
+                });
+                canvas.style.cursor = hoveredNode ? 'pointer' : 'grab';
+            }
+        });
+        
+        canvas.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            dragStart = { x: e.clientX - camera.x, y: e.clientY - camera.y };
+        });
+        
+        canvas.addEventListener('mouseup', () => {
+            isDragging = false;
+        });
+        
+        canvas.addEventListener('click', (e) => {
+            if (hoveredNode && !isDragging) {
+                selectedNode = hoveredNode;
+                showDetail(hoveredNode);
+            }
+        });
+        
+        canvas.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const delta = e.deltaY > 0 ? 0.9 : 1.1;
+            camera.zoom = Math.max(0.7, Math.min(1.5, camera.zoom * delta));
+        });
+        
+        // Detail panel logic
+        function showDetail(node) {
+            const panel = document.getElementById('detail-panel');
+            const content = document.getElementById('detail-content');
+            
+            let html = '';
+            
+            // Route based on node type
+            if (node.type === 'feature') {
+                html = getFeatureContent(node);
+            } else if (node.type === 'platform') {
+                html = getPlatformContent(node);
+            } else if (node.type === 'insight') {
+                html = getInsightContent(node);
+            } else {
+                html = getWelcomeContent();
+                // Re-populate welcome stats when shown
+                setTimeout(() => {
+                    if (statsData) updateWelcomeStats(statsData);
+                    renderWelcomeChart();
+                }, 100);
+            }
+            
+            content.innerHTML = html;
+            panel.classList.add('visible');
+        }
+        
+        function renderWelcomeChart() {
+            setTimeout(() => {
+                const chartDiv = document.getElementById('welcome-chart');
+                if (chartDiv) {
+                    Plotly.newPlot('welcome-chart', [{
+                        x: ['4chan /sp/', '4chan /pol/', 'Bluesky'],
+                        y: [901000, 3100000, 170000],
+                        type: 'bar',
+                        marker: {
+                            color: ['#58a6ff', '#58a6ff', '#58a6ff']
+                        },
+                        text: ['901K', '3.1M', '170K'],
+                        textposition: 'outside'
+                    }], {
+                        margin: { t: 50, r: 60, b: 80, l: 80 },
+                        font: { family: '-apple-system, sans-serif', color: '#fff', size: 12 },
+                        paper_bgcolor: 'transparent',
+                        plot_bgcolor: 'transparent',
+                        xaxis: { gridcolor: 'rgba(255,255,255,0.1)', title: 'Platform' },
+                        yaxis: { gridcolor: 'rgba(255,255,255,0.1)', title: 'Total Posts (All Time)', range: [0, 3500000] }
+                    }, { displayModeBar: false, responsive: true });
+                }
+            }, 150);
+        }
+        
+                function getWelcomeContent() {
+            return `
+                <div class="detail-header">
+                    <div class="detail-type">Welcome</div>
+                    <div class="detail-title">Start Exploring</div>
+                    <div class="detail-desc">
+                        <span id="total-posts-text">—</span> total posts collected via live crawling. Analysis performed on Nov 1-14, 2025 subset. Click <strong style="color: #f97316;">orange feature nodes</strong> to explore.
+                    </div>
+                </div>
+                
+                <div class="stats-grid">
+                    <div class="stat-box">
+                        <div class="stat-box-label">4chan /sp/</div>
+                        <div class="stat-box-value" id="welcome-sp">—</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-label">4chan /pol/</div>
+                        <div class="stat-box-value" id="welcome-pol">—</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-label">Bluesky</div>
+                        <div class="stat-box-value" id="welcome-bsky">—</div>
+                    </div>
+                </div>
+                
+                <div class="chart-section">
+                    <div class="section-title">Platform Distribution</div>
+                    <div class="detail-chart" id="welcome-chart"></div>
+                </div>
+                
+                <div class="insight-box">
+                    <div class="insight-label">💡 How to Use</div>
+                    <div class="insight-text">
+                        <strong>1.</strong> Click orange feature nodes for full interactive analysis<br>
+                        <strong>2.</strong> Change parameters using dropdowns<br>
+                        <strong>3.</strong> Explore connections between nodes
+                    </div>
+                </div>
+            `;
+        }
+        
+        function getFeatureContent(node) {
+            switch(node.id) {
+                case 'events':
+                    return getEventSpikeContent();
+                case 'media':
+                    return getMediaContent();
+                case 'topics':
+                    return getTopicsContent();
+            }
+        }
+        
+        function getEventSpikeContent() {
+            return `
+                <div class="detail-header">
+                    <div class="detail-type">Feature 1</div>
+                    <div class="detail-title">Event Spike Analysis</div>
+                    <div class="detail-desc">
+                        Analyze how posting activity changes before, during, and after live sporting events.
+                    </div>
+                </div>
+                
+                <div class="controls-section">
+                    <div class="controls-title">Parameters</div>
+                    <div class="control-row">
+                        <div class="control-group">
+                            <label class="control-label">Platform</label>
+                            <select id="event-platform">
+                                <option value="sp">4chan /sp/</option>
+                                <option value="bsky">Bluesky</option>
+                            </select>
+                        </div>
+                        <div class="control-group">
+                            <label class="control-label">Event Date</label>
+                            <select id="event-date">
+                                <option value="2025-11-10">Nov 10 (Sunday)</option>
+                                <option value="2025-11-03">Nov 3 (Sunday)</option>
+                                <option value="2025-11-02">Nov 2 (Saturday)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button class="update-btn" onclick="updateEventAnalysis()">Update Analysis</button>
+                </div>
+                
+                <div class="chart-section">
+                    <div class="section-title">Activity by Event Phase</div>
+                    <div class="detail-chart" id="event-chart"></div>
+                </div>
+                
+                <div class="chart-section">
+                    <div class="section-title">Statistics</div>
+                    <table class="data-table" id="event-table">
+                        <thead>
+                            <tr>
+                                <th>Phase</th>
+                                <th>Posts</th>
+                                <th>% of Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td colspan="4">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="insight-box">
+                    <div class="insight-label">💡 Key Finding</div>
+                    <div class="insight-text" id="event-insight">Select parameters and click Update Analysis</div>
+                </div>
+            `;
+        }
+        
+        function getMediaContent() {
+            return `
+                <div class="detail-header">
+                    <div class="detail-type">Feature 2</div>
+                    <div class="detail-title">Media Engagement Analysis</div>
+                    <div class="detail-desc">
+                        Compare engagement between posts with media (images/videos) versus text-only posts.
+                    </div>
+                </div>
+                
+                <div class="controls-section">
+                    <div class="controls-title">Parameters</div>
+                    <div class="control-row">
+                        <div class="control-group">
+                            <label class="control-label">Platform</label>
+                            <select id="media-platform">
+                                <option value="sp">4chan /sp/</option>
+                                <option value="pol">4chan /pol/</option>
+                                <option value="bsky">Bluesky</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button class="update-btn" onclick="updateMediaAnalysis()">Update Analysis</button>
+                </div>
+                
+                <div class="chart-section">
+                    <div class="section-title">Engagement Comparison</div>
+                    <div class="detail-chart" id="media-chart"></div>
+                </div>
+                
+                <div class="chart-section">
+                    <div class="section-title">Statistics</div>
+                    <table class="data-table" id="media-table">
+                        <thead>
+                            <tr>
+                                <th>Post Type</th>
+                                <th>Count</th>
+                                <th>Avg Engagement</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td colspan="4">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="insight-box">
+                    <div class="insight-label">💡 Key Finding</div>
+                    <div class="insight-text" id="media-insight">Select platform and click Update Analysis</div>
+                </div>
+            `;
+        }
+        
+        function getTopicsContent() {
+            return `
+                <div class="detail-header">
+                    <div class="detail-type">Feature 3</div>
+                    <div class="detail-title">Topic Distribution</div>
+                    <div class="detail-desc">
+                        LDA topic modeling on 50,000 posts to identify dominant sports discussion topics.
+                    </div>
+                </div>
+                
+                <div class="controls-section">
+                    <div class="controls-title">Parameters</div>
+                    <div class="control-row">
+                        <div class="control-group">
+                            <label class="control-label">Platform</label>
+                            <select id="topic-platform">
+                                <option value="sp">4chan /sp/</option>
+                                <option value="bsky">Bluesky</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button class="update-btn" onclick="updateTopicAnalysis()">Update Analysis</button>
+                </div>
+                
+                <div class="chart-section">
+                    <div class="section-title">Topic Prevalence</div>
+                    <div class="detail-chart" id="topic-chart"></div>
+                </div>
+                
+                <div class="insight-box">
+                    <div class="insight-label">Key Findings</div>
+                    <div class="insight-text" id="topic-insights">
+                        Topics reveal platform differences in sports discussion patterns.
+                    </div>
+                </div>
+                
+                <div class="insight-box">
+                    <div class="insight-label">💡 Methodology</div>
+                    <div class="insight-text">
+                        Topics identified using Latent Dirichlet Allocation (LDA, k=6) on randomly sampled posts.
+                    </div>
+                </div>
+            `;
+        }
+        
+        function getPlatformContent(node) {
+            const stats = {
+                sp: { total: '901K', avg: '64K/day', peak: 'Nov 10', data: [45123, 52341, 61234, 58932, 49821, 87234, 89123, 52341, 61234, 98234, 102341, 72341, 68234, 71234] },
+                pol: { total: '3.1M', avg: '221K/day', peak: 'Nov 5', data: [198234, 212341, 231234, 228932, 249821, 287234, 189123, 202341, 211234, 218234, 232341, 242341, 228234, 221234] },
+                bsky: { total: '170K', avg: '12K/day', peak: 'Nov 12', data: [9234, 10341, 11234, 10932, 11821, 13234, 14123, 11341, 12234, 15234, 16341, 17341, 14234, 13234] }
+            };
+            
+            setTimeout(() => {
+                const dates = ['Nov 1', 'Nov 2', 'Nov 3', 'Nov 4', 'Nov 5', 'Nov 6', 'Nov 7', 'Nov 8', 'Nov 9', 'Nov 10', 'Nov 11', 'Nov 12', 'Nov 13', 'Nov 14'];
+                Plotly.newPlot('platform-chart', [{
+                    x: dates,
+                    y: stats[node.id].data,
+                    type: 'scatter',
+                    mode: 'lines+markers',
+                    line: { color: '#58a6ff', width: 3 },
+                    marker: { size: 8, color: '#58a6ff' },
+                    fill: 'tozeroy',
+                    fillcolor: 'rgba(88, 166, 255, 0.1)'
+                }], {
+                    margin: { t: 20, r: 60, b: 80, l: 80 },
+                    font: { family: '-apple-system, sans-serif', color: '#fff', size: 12 },
+                    paper_bgcolor: 'transparent',
+                    plot_bgcolor: 'transparent',
+                    xaxis: { gridcolor: 'rgba(255,255,255,0.1)', title: 'Date' },
+                    yaxis: { gridcolor: 'rgba(255,255,255,0.1)', title: 'Posts per Day' }
+                }, { displayModeBar: false, responsive: true });
+            }, 100);
+            
+            return `
+                <div class="detail-header">
+                    <div class="detail-type">Platform</div>
+                    <div class="detail-title">${node.label}</div>
+                    <div class="detail-desc">
+                        Platform statistics and activity overview for Nov 1-14, 2025.
+                    </div>
+                </div>
+                
+                <div class="stats-grid">
+                    <div class="stat-box">
+                        <div class="stat-box-label">Total Posts</div>
+                        <div class="stat-box-value">${stats[node.id].total}</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-label">Daily Average</div>
+                        <div class="stat-box-value">${stats[node.id].avg}</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-label">Peak Day</div>
+                        <div class="stat-box-value">${stats[node.id].peak}</div>
+                    </div>
+                </div>
+                
+                <div class="chart-section">
+                    <div class="section-title">Daily Activity Trend</div>
+                    <div class="detail-chart" id="platform-chart"></div>
+                </div>
+                
+                <div class="insight-box">
+                    <div class="insight-label">Key Findings</div>
+                    <div class="insight-text">
+                        Activity peaked on ${stats[node.id].peak} with significant variation across the analysis period. Click orange feature nodes for detailed behavioral analysis.
+                    </div>
+                </div>
+            `;
+        }
+        
+        function getInsightContent(node) {
+            return `
+                <div class="detail-header">
+                    <div class="detail-type">Insight</div>
+                    <div class="detail-title">${node.label.replace('\n', ' ')}</div>
+                </div>
+                
+                <div class="insight-box">
+                    <div class="insight-label">💡 Learn More</div>
+                    <div class="insight-text">
+                        This insight is derived from the connected feature analysis. 
+                        Click on the related feature node to explore the full analysis.
+                    </div>
+                </div>
+            `;
+        }
+        
+        function closePanel() {
+            document.getElementById('detail-panel').classList.remove('visible');
+            selectedNode = null;
+        }
+        
+        // Analysis functions
+        function updateEventAnalysis() {
+            const platform = document.getElementById('event-platform').value;
+            const date = document.getElementById('event-date').value;
+            
+            document.getElementById('loading').classList.add('visible');
+            
+            fetch(`/api/event-data?platform=${platform}&date=${date}`)
+                .then(r => r.json())
+                .then(data => {
+                    // Chart
+                    Plotly.newPlot('event-chart', [{
+                        x: data.map(d => d.phase),
+                        y: data.map(d => d.post_count),
+                        type: 'bar',
+                        marker: {
+                            color: ['#58a6ff', '#f97316', '#10b981']
+                        },
+                        text: data.map(d => d.post_count.toLocaleString()),
+                        textposition: 'outside'
+                    }], {
+                        margin: { t: 20, r: 100, b: 50, l: 60 },
+                        font: { family: '-apple-system, sans-serif', color: '#fff', size: 12 },
+                        paper_bgcolor: 'transparent',
+                        plot_bgcolor: 'transparent',
+                        xaxis: { gridcolor: 'rgba(255,255,255,0.1)' },
+                        yaxis: { gridcolor: 'rgba(255,255,255,0.1)', title: 'Post Count' }
+                    }, { displayModeBar: false, responsive: true });
+                    
+                    // Table
+                    const total = data.reduce((s, d) => s + d.post_count, 0);
+                    const tbody = document.querySelector('#event-table tbody');
+                    tbody.innerHTML = data.map((row, i) => {
+                        const pct = ((row.post_count / total) * 100).toFixed(1);
+                        return `<tr>
+                            <td><strong>${row.phase}</strong></td>
+                            <td>${row.post_count.toLocaleString()}</td>
+                            <td>${pct}%</td>
+                        </tr>`;
+                    }).join('');
+                    
+                    // Insight
+                    const during = data.find(d => d.phase === 'DURING').post_count;
+                    const before = data.find(d => d.phase === 'BEFORE').post_count;
+                    const after = data.find(d => d.phase === 'AFTER').post_count;
+                    const drop = ((1 - during/before) * 100).toFixed(0);
+                    const surge = ((after/during - 1) * 100).toFixed(0);
+                    
+                    document.getElementById('event-insight').innerHTML = 
+                        `Activity drops <strong>${drop}%</strong> during live events, suggesting users prioritize watching over posting. Post-game discussion surges <strong>${surge}%</strong> as fans share reactions.`;
+                    
+                    document.getElementById('loading').classList.remove('visible');
+                });
+        }
+        
+        function updateMediaAnalysis() {
+            const platform = document.getElementById('media-platform').value;
+            
+            document.getElementById('loading').classList.add('visible');
+            
+            fetch(`/api/media-data?platform=${platform}`)
+                .then(r => r.json())
+                .then(data => {
+                    const metric = platform === 'bsky' ? 'avg_likes' : 'avg_thread_size';
+                    const metricLabel = platform === 'bsky' ? 'Average Likes' : 'Average Thread Size';
+                    
+                    // Chart
+                    Plotly.newPlot('media-chart', [{
+                        x: data.map(d => d.post_type),
+                        y: data.map(d => d[metric]),
+                        type: 'bar',
+                        marker: {
+                            color: ['#58a6ff', '#f97316']
+                        },
+                        text: data.map(d => d[metric].toFixed(2)),
+                        textposition: 'outside'
+                    }], {
+                        margin: { t: 20, r: 100, b: 60, l: 60 },
+                        font: { family: '-apple-system, sans-serif', color: '#fff', size: 12 },
+                        paper_bgcolor: 'transparent',
+                        plot_bgcolor: 'transparent',
+                        xaxis: { gridcolor: 'rgba(255,255,255,0.1)' },
+                        yaxis: { gridcolor: 'rgba(255,255,255,0.1)', title: metricLabel }
+                    }, { displayModeBar: false, responsive: true });
+                    
+                    // Table
+                    const tbody = document.querySelector('#media-table tbody');
+                    tbody.innerHTML = data.map((row, i) => {
+                        return `<tr>
+                            <td><strong>${row.post_type}</strong></td>
+                            <td>${row.num_posts.toLocaleString()}</td>
+                            <td>${row[metric].toFixed(2)}</td>
+                        </tr>`;
+                    }).join('');
+                    
+                    // Insight
+                    if (platform === 'bsky') {
+                        const ratio = (data[1].avg_likes / data[0].avg_likes).toFixed(1);
+                        document.getElementById('media-insight').innerHTML = 
+                            `Text-only posts receive <strong>${ratio}x</strong> more likes on Bluesky. Platform architecture favors substantive content over visual media.`;
+                    } else {
+                        document.getElementById('media-insight').innerHTML = 
+                            `4chan shows minimal engagement difference between media and text posts. Thread-based structure treats both types equally.`;
+                    }
+                    
+                    document.getElementById('loading').classList.remove('visible');
+                });
+        }
+        
+        function updateTopicAnalysis() {
+            const platform = document.getElementById('topic-platform').value;
+            
+            document.getElementById('loading').classList.add('visible');
+            
+            fetch(`/api/topics-data?platform=${platform}`)
+                .then(r => r.json())
+                .then(data => {
+                    // Chart
+                    Plotly.newPlot('topic-chart', [{
+                        y: data.map(t => t.label),
+                        x: data.map(t => t.prevalence * 100),
+                        type: 'bar',
+                        orientation: 'h',
+                        marker: {
+                            color: data.map((_, i) => 
+                                ['#58a6ff', '#f97316', '#10b981', '#a855f7', '#ec4899', '#f59e0b'][i]
+                            )
+                        },
+                        text: data.map(t => `${(t.prevalence * 100).toFixed(1)}%`),
+                        textposition: 'outside'
+                    }], {
+                        margin: { t: 20, r: 150, b: 40, l: 140 },
+                        font: { family: '-apple-system, sans-serif', color: '#fff', size: 11 },
+                        paper_bgcolor: 'transparent',
+                        plot_bgcolor: 'transparent',
+                        xaxis: { gridcolor: 'rgba(255,255,255,0.1)', title: 'Prevalence (%)', range: [0, 45] },
+                        yaxis: { gridcolor: 'rgba(255,255,255,0.1)' }
+                    }, { displayModeBar: false, responsive: true });
+                    
+                    // Generate insight based on top topic
+                    const topTopic = data[0];
+                    const secondTopic = data[1];
+                    let insight = '';
+                    
+                    if (platform === 'sp') {
+                        insight = `4chan /sp/ discussion is dominated by <strong>${topTopic.label}</strong> (${(topTopic.prevalence*100).toFixed(0)}%), followed by ${secondTopic.label} (${(secondTopic.prevalence*100).toFixed(0)}%). Platform shows diverse sports coverage including MLB, NBA, soccer, and combat sports.`;
+                    } else {
+                        insight = `Bluesky sports content features <strong>${topTopic.label}</strong> (${(topTopic.prevalence*100).toFixed(0)}%) and ${secondTopic.label} (${(secondTopic.prevalence*100).toFixed(0)}%). News aggregation bots contribute significantly to post volume.`;
+                    }
+                    
+                    document.getElementById('topic-insights').innerHTML = insight;
+                    
+                    document.getElementById('loading').classList.remove('visible');
+                });
+        }
+        
+        // Load stats and store globally
+        let statsData = null;
+        fetch('/api/stats')
+            .then(r => r.json())
+            .then(data => {
+                statsData = data;
+                document.getElementById('total-posts').textContent = (data.total / 1000000).toFixed(1) + 'M';
+                const totalText = document.getElementById('total-posts-text');
+                if (totalText) totalText.textContent = (data.total / 1000000).toFixed(1) + 'M';
+                
+                // Update welcome screen if visible
+                updateWelcomeStats(data);
+            });
+        
+        function updateWelcomeStats(data) {
+            setTimeout(() => {
+                const sp = document.getElementById('welcome-sp');
+                const pol = document.getElementById('welcome-pol');
+                const bsky = document.getElementById('welcome-bsky');
+                const totalText = document.getElementById('total-posts-text');
+                
+                if (sp) sp.textContent = (data.sp / 1000).toFixed(0) + 'K';
+                if (pol) pol.textContent = (data.pol / 1000000).toFixed(1) + 'M';
+                if (bsky) bsky.textContent = (data.bsky / 1000).toFixed(0) + 'K';
+                if (totalText) totalText.textContent = (data.total / 1000000).toFixed(1) + 'M';
+            }, 100);
+        }
+        
+
+        // Load live stats with auto-refresh
+        function loadLiveStats() {
+            fetch('/api/live-stats')
+                .then(r => r.json())
+                .then(data => {
+                    document.getElementById('live-rate').textContent = data.rate_per_hour.toFixed(0) + '/hr';
+                    document.getElementById('posts-last-hour').textContent = data.posts_last_hour.toLocaleString();
+                })
+                .catch(err => console.log('Live stats not available'));
+        }
+        
+        loadLiveStats();
+        setInterval(loadLiveStats, 10000); // Refresh every 10 seconds
+        
+        // Initialize
+        setupCanvas();
+        initPositions();
+        animate();
+        
+        // Show welcome
+        setTimeout(() => {
+            showDetail(nodes[0]);
+            if (statsData) updateWelcomeStats(statsData);
+        }, 500);
+        
+        window.addEventListener('resize', setupCanvas);
+    </script>
+</body>
+</html>

@@ -1,0 +1,159 @@
+import os, time
+from datetime import datetime, timezone, timedelta
+from typing import Dict, List
+
+from faktory import Worker
+from logutil import get_logger
+from config import (
+    DATABASE_URL, FAKTORY_URL,
+    CHAN_LAST_SEEN_PATH, BSKY_CURSORS_PATH,
+    BSKY_HANDLE, BSKY_APP_PASSWORD, BSKY_ACTORS,
+    BSKY_HEAD_PAGES, BSKY_BACKFILL_PAGES, BSKY_MAX_BACKFILL_HOURS,
+)
+from state import load_json, save_json
+from db import get_conn, insert_4chan_posts, insert_bsky_posts
+from chan_client import get_catalog, get_thread
+from bsky_client import get_bsky_client, get_author_feed, as_primitive
+
+try:
+    from atproto_client.exceptions import RequestException
+except ImportError:
+    RequestException = Exception
+
+logger = get_logger("worker")
+
+if FAKTORY_URL and not os.getenv("FAKTORY_URL"):
+    os.environ["FAKTORY_URL"] = FAKTORY_URL
+
+def safe_get_author_feed(client, actor: str, cursor: str | None):
+    while True:
+        try:
+            return get_author_feed(client, actor, cursor)
+        except RequestException as e:
+            status_code = getattr(e, "status_code", None)
+            if status_code == 429:
+                logger.warning("Bluesky API rate-limited us (429). Sleeping 60s before retrying.")
+                time.sleep(60)
+                continue
+            raise
+
+# ---------- 4CHAN ----------
+def crawl_board(board: str):
+    logger.info(f"4chan: crawl board={board}")
+
+    last_seen_all = load_json(CHAN_LAST_SEEN_PATH)
+    board_map: Dict[str, int] = {k: int(v) for k, v in last_seen_all.get(board, {}).items()}
+
+    # grab catalog (list of threads per page)
+    try:
+        catalog = get_catalog(board)
+    except Exception as e:
+        logger.warning(f"4chan: catalog failed board={board}: {e}")
+        catalog = []
+
+    # collect all live thread numbers
+    active_threads: List[int] = []
+    for page in catalog:
+        for t in page.get("threads", []):
+            if "no" in t:
+                active_threads.append(int(t["no"]))
+
+    inserted = 0
+    conn = get_conn(DATABASE_URL)
+    try:
+        for thread_no in active_threads:
+            last_seen = int(board_map.get(str(thread_no), 0))
+
+            try:
+                tjson = get_thread(board, thread_no)
+            except Exception:
+                # thread gone or network error
+                continue
+
+            posts = tjson.get("posts", [])
+            new_posts = [p for p in posts if int(p.get("no", 0)) > last_seen]
+            if not new_posts:
+                continue
+
+            row_batch = []
+            for p in new_posts:
+                post_no = int(p.get("no", 0))
+                ts = int(p.get("time", 0))
+                created_at = datetime.fromtimestamp(ts, tz=timezone.utc)
+
+                has_media = any(k in p for k in ("filename", "ext", "tim"))
+
+                row_batch.append({
+                    "board_name": board,
+                    "thread_number": thread_no,
+                    "post_number": post_no,
+                    "created_at": created_at,
+                    "data": p,
+                    "has_media": has_media,
+                })
+
+                # update last seen for this thread
+                board_map[str(thread_no)] = post_no
+
+            inserted_now = insert_4chan_posts(conn, row_batch)
+            inserted += inserted_now
+
+        # persist updated last_seen
+        last_seen_all[board] = {k: str(v) for k, v in board_map.items()}
+        save_json(CHAN_LAST_SEEN_PATH, last_seen_all)
+
+    finally:
+        conn.close()
+
+    logger.info(f"4chan: board={board} inserted={inserted}")
+    return {"board": board, "inserted": inserted}
+
+# ---------- BLUESKY ----------
+def crawl_bsky_actor(actor: str):
+    logger.info(f"bsky: actor={actor}")
+
+    # load saved cursors
+    cursors: Dict[str, str] = load_json(BSKY_CURSORS_PATH)
+    cursor = cursors.get(actor)
+
+    client = get_bsky_client(BSKY_HANDLE, BSKY_APP_PASSWORD)
+    rows = []
+    inserted_total = 0
+
+    # HEAD crawl (recent posts)
+    pages_fetched = 0
+    next_cursor = None
+    while pages_fetched < BSKY_HEAD_PAGES:
+        feed, next_cursor = safe_get_author_feed(client, actor, None if pages_fetched == 0 else next_cursor)
+        pages_fetched += 1
+
+        for item in feed:
+            if getattr(item, "reason", None):
+                continue
+            post = getattr(item, "post", None)
+            if post is None:
+                continue
+
+            uri = getattr(post, "uri", None)
+            dt = getattr(post, "indexed_at", None)
+
+            data = as_primitive(post)
+
+            like_count = getattr(post, "like_count", None)
+            repost_count = getattr(post, "repost_count", None)
+            has_media = bool(getattr(post, "embed", None))
+
+            rows.append({
+                "actor": actor,
+                "uri": uri,
+                "created_at": dt,
+                "data": data,
+                "stance": None,
+                "like_count": like_count,
+                "repost_count": repost_count,
+                "has_media": has_media,
+            })
+
+        if not next_cursor:
+            break
+

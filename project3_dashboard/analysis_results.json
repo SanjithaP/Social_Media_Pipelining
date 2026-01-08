@@ -1,0 +1,266 @@
+{
+  "sp_topics": [
+    {
+      "label": "MLB Baseball",
+      "prevalence": 0.35,
+      "top_words": [
+        "dodgers",
+        "jays",
+        "ohtani",
+        "baseball",
+        "world",
+        "series",
+        "pitcher",
+        "yankees",
+        "game",
+        "win"
+      ]
+    },
+    {
+      "label": "NBA Discussion",
+      "prevalence": 0.28,
+      "top_words": [
+        "nba",
+        "basketball",
+        "lakers",
+        "celtics",
+        "lebron",
+        "durant",
+        "curry",
+        "dunk",
+        "playoff",
+        "championship"
+      ]
+    },
+    {
+      "label": "Soccer/Football",
+      "prevalence": 0.12,
+      "top_words": [
+        "soccer",
+        "football",
+        "premier",
+        "league",
+        "manchester",
+        "arsenal",
+        "chelsea",
+        "messi",
+        "ronaldo",
+        "goal"
+      ]
+    },
+    {
+      "label": "Combat Sports",
+      "prevalence": 0.1,
+      "top_words": [
+        "ufc",
+        "mma",
+        "boxing",
+        "fight",
+        "fighter",
+        "knockout",
+        "dana",
+        "octagon",
+        "round",
+        "champion"
+      ]
+    },
+    {
+      "label": "Racing/Formula 1",
+      "prevalence": 0.08,
+      "top_words": [
+        "f1",
+        "formula",
+        "racing",
+        "verstappen",
+        "hamilton",
+        "ferrari",
+        "mercedes",
+        "race",
+        "lap",
+        "pole"
+      ]
+    },
+    {
+      "label": "Hockey/NHL",
+      "prevalence": 0.07,
+      "top_words": [
+        "hockey",
+        "nhl",
+        "puck",
+        "ice",
+        "canadiens",
+        "bruins",
+        "leafs",
+        "stanley",
+        "cup",
+        "goalie"
+      ]
+    }
+  ],
+  "bsky_topics": [
+    {
+      "label": "NFL Discussion",
+      "prevalence": 0.38,
+      "top_words": [
+        "nfl",
+        "football",
+        "touchdown",
+        "quarterback",
+        "chiefs",
+        "cowboys",
+        "game",
+        "season",
+        "week",
+        "sunday"
+      ]
+    },
+    {
+      "label": "NBA Discussion",
+      "prevalence": 0.32,
+      "top_words": [
+        "nba",
+        "basketball",
+        "lakers",
+        "warriors",
+        "celtics",
+        "lebron",
+        "curry",
+        "points",
+        "game",
+        "season"
+      ]
+    },
+    {
+      "label": "College Sports",
+      "prevalence": 0.18,
+      "top_words": [
+        "college",
+        "ncaa",
+        "university",
+        "conference",
+        "recruiting",
+        "draft",
+        "prospect",
+        "campus",
+        "coach",
+        "student"
+      ]
+    },
+    {
+      "label": "Sports Analysis",
+      "prevalence": 0.12,
+      "top_words": [
+        "stats",
+        "analytics",
+        "performance",
+        "metrics",
+        "analysis",
+        "data",
+        "trends",
+        "predictions",
+        "odds",
+        "betting"
+      ]
+    }
+  ],
+  "sp_media": [
+    {
+      "post_type": "With Media",
+      "num_posts": 189391,
+      "avg_thread_size": 778.64
+    },
+    {
+      "post_type": "Text Only",
+      "num_posts": 711607,
+      "avg_thread_size": 815.44
+    }
+  ],
+  "pol_media": [
+    {
+      "post_type": "With Media",
+      "num_posts": 833419,
+      "avg_thread_size": 171.2
+    },
+    {
+      "post_type": "Text Only",
+      "num_posts": 2247280,
+      "avg_thread_size": 166.78
+    }
+  ],
+  "bsky_media": [
+    {
+      "post_type": "With Media",
+      "num_posts": 159125,
+      "avg_likes": 2.0,
+      "avg_reposts": 0.19
+    },
+    {
+      "post_type": "Text Only",
+      "num_posts": 10892,
+      "avg_likes": 24.3,
+      "avg_reposts": 2.06
+    }
+  ],
+  "event_examples": {
+    "sp": {
+      "2025-11-02": [
+        {
+          "phase": "DURING",
+          "post_count": 3993
+        },
+        {
+          "phase": "BEFORE",
+          "post_count": 21432
+        },
+        {
+          "phase": "AFTER",
+          "post_count": 11187
+        }
+      ],
+      "2025-11-10": [
+        {
+          "phase": "DURING",
+          "post_count": 2369
+        },
+        {
+          "phase": "BEFORE",
+          "post_count": 7344
+        },
+        {
+          "phase": "AFTER",
+          "post_count": 3583
+        }
+      ]
+    },
+    "bsky": {
+      "2025-11-03": [
+        {
+          "phase": "DURING",
+          "post_count": 159
+        },
+        {
+          "phase": "BEFORE",
+          "post_count": 177
+        },
+        {
+          "phase": "AFTER",
+          "post_count": 165
+        }
+      ],
+      "2025-11-10": [
+        {
+          "phase": "DURING",
+          "post_count": 704
+        },
+        {
+          "phase": "BEFORE",
+          "post_count": 2769
+        },
+        {
+          "phase": "AFTER",
+          "post_count": 805
+        }
+      ]
+    }
+  }
+}

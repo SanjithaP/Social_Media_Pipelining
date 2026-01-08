@@ -1,0 +1,15 @@
+[Unit]
+Description=Social pipeline producer (enqueue crawl jobs)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=irajmohan
+WorkingDirectory=/home/irajmohan/social-pipeline/app
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/home/irajmohan/social-pipeline/app/.venv/bin/python3 /home/irajmohan/social-pipeline/app/producer.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

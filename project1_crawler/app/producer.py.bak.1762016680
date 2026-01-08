@@ -1,0 +1,32 @@
+import os
+import time
+import faktory
+from logutil import get_logger
+from config import (
+    FAKTORY_URL, POLL_SECONDS, BOARDS, BSKY_ACTORS
+)
+
+logger = get_logger("producer")
+
+# Ensure faktory lib sees URL
+if FAKTORY_URL and not os.getenv("FAKTORY_URL"):
+    os.environ["FAKTORY_URL"] = FAKTORY_URL
+
+def main():
+    logger.info("producer: starting")
+    while True:
+        try:
+            with faktory.connection() as client:
+                # Enqueue 4chan board crawl
+                for board in BOARDS:
+                    client.queue('crawl_board', args=(board,), queue='crawl')
+                # Enqueue each Bluesky actor
+                for actor in BSKY_ACTORS:
+                    client.queue('crawl_bsky_actor', args=(actor,), queue='crawl')
+            logger.info(f"producer: enqueued boards={len(BOARDS)} actors={len(BSKY_ACTORS)}")
+        except Exception as e:
+            logger.error(f"producer: enqueue failed: {e}")
+        time.sleep(POLL_SECONDS)
+
+if __name__ == "__main__":
+    main()
